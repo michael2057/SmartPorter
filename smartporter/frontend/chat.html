@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- jQuery slim and Bootstrap JS -->
+    <!-- <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div id="chatWindow" class="col-12 overflow-auto bg-light" style="height: 80vh;"></div>
+            <div id="chatInput" class="col-12 bg-light py-3" style="height: 20vh;">
+                <textarea id="messageInput" class="form-control" rows="3"></textarea>
+                <button id="sendButton" class="btn btn-primary mt-2">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            var startTime;
+            var elapsedTime = 0;
+            var intervalId;
+
+            $('#sendButton').click(function(){
+                var message = $('#messageInput').val();
+                if(message.length > 200) {
+                    alert('Message too long!');
+                    return;
+                }
+                $('#chatWindow').append('<div class="userMessage text-white bg-primary p-2 my-2 rounded">' + message + '</div>');
+                $('#messageInput').val('');
+                $('#chatWindow').append('<div id="waiting">Waiting for reply...</div>');
+                startTime = Date.now();
+                intervalId = setInterval(function(){
+                    elapsedTime = Date.now() - startTime;
+                    $('#waiting').text('正在等待人工智能回答... (已经过去：' + (elapsedTime / 1000) + ' 秒)');
+                }, 1000);
+                $.ajax({
+                    url: 'http://127.0.0.1:5000/api/chat',
+                    type: 'post',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    success: function (data) {
+                        clearInterval(intervalId);
+                        $('#waiting').remove();
+                        if (data.chatlog[1].role === 'user') {
+                                $('#chatWindow').append('<div class="userMessage text-white bg-primary p-2 my-2 rounded">' + data.chatlog[1].content + '</div>');
+                            } else if (data.chatlog[1].role === 'assistant') {
+                                $('#chatWindow').append('<div class="aiMessage text-dark bg-light p-2 my-2 rounded">' + data.chatlog[1].content + '</div>');
+                        }
+                        // 遍历 data.chatlog 数组
+                        /*
+                        for (let i = 0; i < data.chatlog.length; i++) {
+                            // 判断 role 属性
+                            if (data.chatlog[i].role === 'user') {
+                                $('#chatWindow').append('<div class="userMessage text-white bg-primary p-2 my-2 rounded">' + data.chatlog[i].content + '</div>');
+                            } else if (data.chatlog[i].role === 'assistant') {
+                                $('#chatWindow').append('<div class="aiMessage text-dark bg-light p-2 my-2 rounded">' + data.chatlog[i].content + '</div>');
+                            }
+                        }
+                        */
+                    },
+                    data: JSON.stringify({
+                        'message': message
+                    })
+                });
+            });
+        });
+    </script>
+</body>
+</html>
